@@ -1,0 +1,45 @@
+html {
+  font-size: 14px;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+#tlo {
+    background-color: rgb(251, 207, 40);
+
+}
+
+.container-fluid {
+/*    background-color: rgb(224, 174, 11);*/
+}
+}
+
+header {
+    background-color: rgb(251, 207, 40);
+}
+
+footer {
+    background-color: white;
+}
+
+html {
+    position: relative;
+    min-height: 100%;
+    background-color: rgb(251, 207, 40);
+}
+
+
+
+body {
+  margin-bottom: 60px;
+
+}
+
+
+@import ($start-color: $gray-700, $end-color: $gray-800, $start-percent: null, $end-percent: null) {
+    background-image: linear-gradient(to bottom, $start-color $start-percent, $end-color $end-percent);
+}
