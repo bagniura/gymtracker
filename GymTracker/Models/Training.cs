@@ -8,7 +8,7 @@
         public int Repetitions { get; set; }
         public int Sets { get; set; }
         public double Weight { get; set; }
-        public TimeSpan Duration { get; set; }
+        public TimeSpan? Duration { get; set; }
         public DateTime Date { get; set; }
     }
 }
