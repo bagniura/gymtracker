@@ -4,6 +4,7 @@ using GymTracker.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GymTracker.Migrations
 {
     [DbContext(typeof(GymTrackerContext))]
-    partial class GymTrackerContextModelSnapshot : ModelSnapshot
+    [Migration("20240606211326_AddTrainingPlans")]
+    partial class AddTrainingPlans
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -34,13 +36,13 @@ namespace GymTracker.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Name")
+                    b.Property<string>("PlanName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
-                    b.ToTable("Exercises");
+                    b.ToTable("Exercise");
                 });
 
             modelBuilder.Entity("GymTracker.Models.ExercisePlan", b =>
@@ -60,9 +62,6 @@ namespace GymTracker.Migrations
                     b.Property<int>("Sets")
                         .HasColumnType("int");
 
-                    b.Property<int?>("TrainingPlanId")
-                        .HasColumnType("int");
-
                     b.Property<double>("Weight")
                         .HasColumnType("float");
 
@@ -70,30 +69,7 @@ namespace GymTracker.Migrations
 
                     b.HasIndex("ExerciseId");
 
-                    b.HasIndex("TrainingPlanId");
-
-                    b.ToTable("ExercisePlans");
-                });
-
-            modelBuilder.Entity("GymTracker.Models.TrainingPlan", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("TrainingPlans");
+                    b.ToTable("Training");
                 });
 
             modelBuilder.Entity("GymTracker.Models.Userr", b =>
@@ -141,7 +117,7 @@ namespace GymTracker.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Userrs");
+                    b.ToTable("Userr");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -350,10 +326,6 @@ namespace GymTracker.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("GymTracker.Models.TrainingPlan", null)
-                        .WithMany("ExercisePlans")
-                        .HasForeignKey("TrainingPlanId");
-
                     b.Navigation("Exercise");
                 });
 
@@ -415,11 +387,6 @@ namespace GymTracker.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-                });
-
-            modelBuilder.Entity("GymTracker.Models.TrainingPlan", b =>
-                {
-                    b.Navigation("ExercisePlans");
                 });
 #pragma warning restore 612, 618
         }

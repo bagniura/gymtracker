@@ -7,9 +7,11 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using GymTracker.Data;
 using GymTracker.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace GymTracker.Controllers
 {
+    [Authorize]
     public class TrainingPlansController : Controller
     {
         private readonly GymTrackerContext _context;
@@ -19,23 +21,49 @@ namespace GymTracker.Controllers
             _context = context;
         }
 
-        // GET: TrainingPlans
         public async Task<IActionResult> Index()
         {
-              return _context.TrainingPlan != null ? 
-                          View(await _context.TrainingPlan.ToListAsync()) :
-                          Problem("Entity set 'GymTrackerContext.TrainingPlan'  is null.");
+            var userId = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)
+                ?.Value;
+
+            if (User.IsInRole("Admin"))
+            {
+                var trainingPlans = await _context.TrainingPlans
+                    .Include(t => t.ExercisePlans)
+                    .ThenInclude(ep => ep.Exercise)
+                    .ToListAsync();
+
+                var users = await _context.Users.ToDictionaryAsync(u => u.Id, u => u);
+
+                ViewBag.Users = users;
+
+                return View(trainingPlans);
+            }
+
+            if (!string.IsNullOrEmpty(userId))
+            {
+                var userTrainingPlans = await _context.TrainingPlans
+                    .Include(t => t.ExercisePlans)
+                    .ThenInclude(ep => ep.Exercise)
+                    .Where(t => t.UserId == userId)
+                    .ToListAsync();
+                return View(userTrainingPlans);
+            }
+
+            return NotFound();
         }
 
-        // GET: TrainingPlans/Details/5
+
         public async Task<IActionResult> Details(int? id)
         {
-            if (id == null || _context.TrainingPlan == null)
+            if (id == null)
             {
                 return NotFound();
             }
 
-            var trainingPlan = await _context.TrainingPlan
+            var trainingPlan = await _context.TrainingPlans
+                .Include(t => t.ExercisePlans)
+                .ThenInclude(e => e.Exercise)
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (trainingPlan == null)
             {
@@ -45,55 +73,83 @@ namespace GymTracker.Controllers
             return View(trainingPlan);
         }
 
-        // GET: TrainingPlans/Create
+        [Authorize(Roles = "Admin")]
         public IActionResult Create()
         {
-            return View();
+
+
+            ViewBag.Users = new SelectList(_context.Users, "Id", "Email");
+            ViewBag.Exercises = new SelectList(_context.Exercises, "Id", "Name");
+            return View(new TrainingPlan());
         }
 
-        // POST: TrainingPlans/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,UserId,PlanName,Description")] TrainingPlan trainingPlan)
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Create([Bind("Id, UserId, Name, ExercisePlans")] TrainingPlan trainingPlan)
         {
+            ModelState.Keys.Where(k => k.Contains("Exercise")).ToList().ForEach(key => ModelState.Remove(key));
+
             if (ModelState.IsValid)
             {
                 _context.Add(trainingPlan);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
+
+            foreach (var entry in ModelState)
+            {
+                if (entry.Value.Errors.Count > 0)
+                {
+                    Console.WriteLine(
+                        $"{entry.Key}: {string.Join(", ", entry.Value.Errors.Select(e => e.ErrorMessage))}");
+                }
+            }
+
+            ViewBag.Users = new SelectList(_context.Users, "Id", "Email");
+            ViewBag.Exercises = new SelectList(_context.Exercises, "Id", "Name");
             return View(trainingPlan);
         }
 
-        // GET: TrainingPlans/Edit/5
+
         public async Task<IActionResult> Edit(int? id)
         {
-            if (id == null || _context.TrainingPlan == null)
+            if (id == null)
             {
                 return NotFound();
             }
 
-            var trainingPlan = await _context.TrainingPlan.FindAsync(id);
+            var trainingPlan = await _context.TrainingPlans
+                .Include(tp => tp.ExercisePlans)
+                .ThenInclude(ep => ep.Exercise)
+                .FirstOrDefaultAsync(m => m.Id == id);
+
             if (trainingPlan == null)
             {
                 return NotFound();
             }
+
+
+
+            ViewBag.Users = new SelectList(_context.Users, "Id", "Email", trainingPlan.UserId);
+            ViewBag.Exercises = new SelectList(_context.Exercises, "Id", "Name");
+
             return View(trainingPlan);
         }
 
-        // POST: TrainingPlans/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,UserId,PlanName,Description")] TrainingPlan trainingPlan)
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Edit(int id, [Bind("Id,UserId,Name,ExercisePlans")] TrainingPlan trainingPlan)
         {
             if (id != trainingPlan.Id)
             {
                 return NotFound();
             }
+
+            ModelState.Keys.Where(k => k.Contains("Exercise")).ToList().ForEach(key => ModelState.Remove(key));
 
             if (ModelState.IsValid)
             {
@@ -101,6 +157,7 @@ namespace GymTracker.Controllers
                 {
                     _context.Update(trainingPlan);
                     await _context.SaveChangesAsync();
+                    return RedirectToAction(nameof(Index));
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -113,20 +170,24 @@ namespace GymTracker.Controllers
                         throw;
                     }
                 }
-                return RedirectToAction(nameof(Index));
             }
+
+            ViewBag.Users = new SelectList(_context.Users, "Id", "Email", trainingPlan.UserId);
+            ViewBag.Exercises = new SelectList(_context.Exercises, "Id", "Name");
+
             return View(trainingPlan);
         }
 
-        // GET: TrainingPlans/Delete/5
+
         public async Task<IActionResult> Delete(int? id)
         {
-            if (id == null || _context.TrainingPlan == null)
+            if (id == null)
             {
                 return NotFound();
             }
 
-            var trainingPlan = await _context.TrainingPlan
+            var trainingPlan = await _context.TrainingPlans
+                .Include(t => t.ExercisePlans)
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (trainingPlan == null)
             {
@@ -136,28 +197,44 @@ namespace GymTracker.Controllers
             return View(trainingPlan);
         }
 
-        // POST: TrainingPlans/Delete/5
-        [HttpPost, ActionName("Delete")]
+        [Authorize(Roles = "Admin")]
+        [HttpPost, ActionName("DeleteConfirmed")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            if (_context.TrainingPlan == null)
-            {
-                return Problem("Entity set 'GymTrackerContext.TrainingPlan'  is null.");
-            }
-            var trainingPlan = await _context.TrainingPlan.FindAsync(id);
-            if (trainingPlan != null)
-            {
-                _context.TrainingPlan.Remove(trainingPlan);
-            }
-            
+            var trainingPlan = await _context.TrainingPlans.FindAsync(id);
+            _context.TrainingPlans.Remove(trainingPlan);
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
 
         private bool TrainingPlanExists(int id)
         {
-          return (_context.TrainingPlan?.Any(e => e.Id == id)).GetValueOrDefault();
+            return _context.TrainingPlans.Any(e => e.Id == id);
         }
+        
+        
+        public async Task<PartialViewResult> GetUserTrainingPlan()
+        {
+            var userId = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                var trainingPlan = await _context.TrainingPlans
+                    .Include(t => t.ExercisePlans)
+                    .ThenInclude(ep => ep.Exercise)
+                    .FirstOrDefaultAsync(t => t.UserId == userId);
+
+                if (trainingPlan == null)
+                {
+                    Console.WriteLine("No training plan found for user: " + userId);
+                }
+
+                return PartialView("TrainingPlanPanel", trainingPlan);
+            }
+
+            Console.WriteLine("User ID is null or empty");
+            return PartialView("TrainingPlanPanel", null);
+        }
+
     }
 }

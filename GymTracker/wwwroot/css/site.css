@@ -9,7 +9,6 @@ html {
 }
 
 #tlo {
-    background-color: rgb(251, 207, 40);
 
 }
 
@@ -26,11 +25,16 @@ footer {
     background-color: white;
 }
 
+
 html {
     position: relative;
     min-height: 100%;
-    background-color: rgb(251, 207, 40);
+    background-image: url('../BackGround.jpeg');
+    background-size: cover;
+    opacity: 1.2;
 }
+
+
 
 
 

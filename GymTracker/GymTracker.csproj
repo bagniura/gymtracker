@@ -20,4 +20,17 @@
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="6.0.16" />
   </ItemGroup>
 
+  <ItemGroup>
+    <_ContentIncludedByDefault Remove="Views\Exercises\Index.cshtml" />
+    <_ContentIncludedByDefault Remove="Views\ExercisePlans\Create.cshtml" />
+    <_ContentIncludedByDefault Remove="Views\ExercisePlans\Delete.cshtml" />
+    <_ContentIncludedByDefault Remove="Views\ExercisePlans\Details.cshtml" />
+    <_ContentIncludedByDefault Remove="Views\ExercisePlans\Edit.cshtml" />
+    <_ContentIncludedByDefault Remove="Views\ExercisePlans\Index.cshtml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="wwwroot\BackGround.jpg" />
+  </ItemGroup>
+
 </Project>

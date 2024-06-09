@@ -24,7 +24,7 @@ public class Program
                 var userManager = services.GetRequiredService<UserManager<IdentityUser>>();
                 var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
 
-                var roles = new string[] { "Administrator", "InnaRola" };
+                var roles = new string[] { "Admin", "InnaRola" };
                 foreach (var roleName in roles)
                 {
                     var roleExist = await roleManager.RoleExistsAsync(roleName);
@@ -34,7 +34,7 @@ public class Program
                     }
                 }
 
-                SeedData.Initialize(services, userManager, roleManager).Wait();
+                SeedData.Initialize(services).Wait();
             }
             catch (Exception ex)
             {

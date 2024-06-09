@@ -23,24 +23,32 @@ namespace GymTracker.Controllers
             _userManager = userManager;
         }
 
-        // GET: Userrs
         public async Task<IActionResult> Index()
         {
-            IdentityUser user = await _userManager.FindByNameAsync(User.Identity.Name);
-            return _context.Userr != null ?
-                          View(await _context.Userr.Where(m => m.UserId == user.Id).ToListAsync()) :
-                          Problem("Entity set 'GymTrackerContext.Userr' is null.");
+            var user = await _userManager.GetUserAsync(User);
+            bool isAdmin = await _userManager.IsInRoleAsync(user, "Admin");  
+
+            if (isAdmin)
+            {
+                var allUsers = await _context.Userrs.ToListAsync();  
+                return View(allUsers);
+            }
+            else
+            {
+                var userRecords = await _context.Userrs.Where(u => u.UserId == user.Id).Include(u => u.User).ToListAsync();  // Pobranie danych tylko zalogowanego użytkownika
+                return View(userRecords);
+            }
         }
 
-        // GET: Userrs/Details/5
+
         public async Task<IActionResult> Details(int? id)
         {
-            if (id == null || _context.Userr == null)
+            if (id == null || _context.Userrs == null)
             {
                 return NotFound();
             }
 
-            var Userr = await _context.Userr
+            var Userr = await _context.Userrs
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (Userr == null)
             {
@@ -53,110 +61,105 @@ namespace GymTracker.Controllers
 
 
 
-        // GET: Userrs/Create
         public IActionResult Create()
         {
             return View();
         }
 
-        // POST: Userrs/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+        
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,FirstName,LastName,Email")] Userr Userr)
+        public async Task<IActionResult> Create([Bind("FirstName,LastName,Email,Age,Gender,Height,Weight,RegistrationDate,LastLoginDate")] Userr userr)
         {
-            IdentityUser user = await _userManager.FindByNameAsync(User.Identity.Name);
-            Userr.UserId = user.Id;
-
-            var existingUserr = _context.Userr.FirstOrDefault(c => c.UserId == user.Id);
-
-            if (existingUserr != null)
-            {
-                // Możesz obsłużyć przypadek, gdy użytkownik ma już utworzone konto klienta
-                ModelState.AddModelError(string.Empty, "Nie możesz wypełnić ponownie tego formularza, ponieważ masz już istniejące konto użytkownika! Formularz można wypełnić tylko raz na jedno konto!");
-            }
-
             if (ModelState.IsValid)
             {
-                if (existingUserr == null)
-                {
-                    _context.Add(Userr);
-                    await _context.SaveChangesAsync();
-                    return RedirectToAction(nameof(Index));
-                }
-            }
+                var user = await _userManager.GetUserAsync(User);
+                userr.UserId = user.Id; 
 
-            return View(Userr);
+                
+                if (!userr.RegistrationDate.HasValue)
+                    userr.RegistrationDate = DateTime.Now;
+
+                if (!userr.LastLoginDate.HasValue)
+                    userr.LastLoginDate = DateTime.Now;
+
+                _context.Add(userr);
+                await _context.SaveChangesAsync();
+                return RedirectToAction(nameof(Index)); 
+            }
+            return View(userr);
         }
 
+        
 
-
-
-
-
-
-
-        // GET: Userrs/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
-            if (id == null || _context.Userr == null)
+            if (id == null)
             {
                 return NotFound();
             }
 
-            var Userr = await _context.Userr.FindAsync(id);
-            if (Userr == null)
+            var userDetail = await _context.Userrs.FindAsync(id);
+            if (userDetail == null)
             {
                 return NotFound();
             }
-            return View(Userr);
+
+            return View(userDetail);
         }
 
-        // POST: Userrs/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,FirstName,LastName,Email")] Userr Userr)
+        public async Task<IActionResult> Edit(int id,[Bind("FirstName,LastName,Email,Age,Gender,Height,Weight,RegistrationDate,LastLoginDate")] Userr userr)
         {
-            if (id != Userr.Id)
+            var user = await _userManager.GetUserAsync(User);
+            var existingUserr = await _context.Userrs.FindAsync(id);
+
+            if (existingUserr == null)
             {
                 return NotFound();
             }
+
+            if (existingUserr.UserId != user.Id)
+            {
+                return Forbid(); 
+            }
+            
+            if (!userr.RegistrationDate.HasValue)
+                userr.RegistrationDate = DateTime.Now;
+
+            if (!userr.LastLoginDate.HasValue)
+                userr.LastLoginDate = DateTime.Now;
 
             if (ModelState.IsValid)
             {
-                try
-                {
-                    _context.Update(Userr);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!UserrExists(Userr.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                return RedirectToAction(nameof(Index));
+                existingUserr.FirstName = userr.FirstName;
+                existingUserr.LastName = userr.LastName;
+                existingUserr.Email = userr.Email;
+                existingUserr.Age = userr.Age;
+                existingUserr.Gender = userr.Gender;
+                existingUserr.Height = userr.Height;
+                existingUserr.Weight = userr.Weight;
+                existingUserr.RegistrationDate = userr.RegistrationDate;
+                existingUserr.LastLoginDate = userr.LastLoginDate;
+
+                _context.Update(existingUserr);
+                await _context.SaveChangesAsync();
+
+                TempData["Message"] = "Your profile has been updated successfully";
+                return RedirectToAction(nameof(Index)); 
             }
-            return View(Userr);
+            return View(userr);
         }
 
-        // GET: Userrs/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
-            if (id == null || _context.Userr == null)
+            if (id == null || _context.Userrs == null)
             {
                 return NotFound();
             }
 
-            var Userr = await _context.Userr
+            var Userr = await _context.Userrs
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (Userr == null)
             {
@@ -166,19 +169,18 @@ namespace GymTracker.Controllers
             return View(Userr);
         }
 
-        // POST: Userrs/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            if (_context.Userr == null)
+            if (_context.Userrs == null)
             {
                 return Problem("Entity set 'GymTrackerContext.Userr'  is null.");
             }
-            var Userr = await _context.Userr.FindAsync(id);
+            var Userr = await _context.Userrs.FindAsync(id);
             if (Userr != null)
             {
-                _context.Userr.Remove(Userr);
+                _context.Userrs.Remove(Userr);
             }
 
             await _context.SaveChangesAsync();
@@ -187,7 +189,9 @@ namespace GymTracker.Controllers
 
         private bool UserrExists(int id)
         {
-            return (_context.Userr?.Any(e => e.Id == id)).GetValueOrDefault();
+            return (_context.Userrs?.Any(e => e.Id == id)).GetValueOrDefault();
         }
+        
+
     }
 }

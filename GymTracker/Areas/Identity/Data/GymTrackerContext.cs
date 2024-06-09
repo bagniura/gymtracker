@@ -21,9 +21,13 @@ public class GymTrackerContext : IdentityDbContext<IdentityUser>
     }
 
 
-    public DbSet<GymTracker.Models.Training>? Training { get; set; }
+    public DbSet<ExercisePlan>? ExercisePlans { get; set; }
 
-    public DbSet<GymTracker.Models.TrainingPlan>? TrainingPlan { get; set; }
+    public DbSet<TrainingPlan>? TrainingPlans { get; set; }
 
-    public DbSet<GymTracker.Models.Userr>? Userr { get; set; }
+    public DbSet<Userr>? Userrs { get; set; }
+    
+    public DbSet<Exercise> Exercises { get; set; }
+    
+    
 }

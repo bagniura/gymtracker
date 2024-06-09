@@ -33,31 +33,22 @@ public class Startup
                 sqlOptions.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(30), errorNumbersToAdd: null);
             });
         });
+        services.AddIdentity<IdentityUser, IdentityRole>(options =>
+            {
+                options.SignIn.RequireConfirmedEmail = false;
+            })
+            .AddEntityFrameworkStores<GymTrackerContext>()
+            .AddDefaultTokenProviders();
+
+        services.AddAuthorization(options =>
+        {
+            options.AddPolicy("RequireAdminRole", policy => policy.RequireRole("Admin"));
+        });
 
         services.AddDatabaseDeveloperPageExceptionFilter();
 
         services.AddTransient<IEmailSender, EmailSender>();
-
-        services.AddIdentity<IdentityUser, IdentityRole>(options =>
-        {
-            options.SignIn.RequireConfirmedEmail = true;
-            options.SignIn.RequireConfirmedAccount = true;
-        })
-        .AddEntityFrameworkStores<GymTrackerContext>()
-        .AddDefaultTokenProviders()
-        .AddSignInManager<SignInManager<IdentityUser>>();
-
-        services.Configure<IdentityOptions>(options =>
-        {
-            options.Password.RequireDigit = true;
-            options.Password.RequireLowercase = true;
-            options.Password.RequireUppercase = true;
-            options.Password.RequireNonAlphanumeric = true;
-            options.Password.RequiredLength = 8;
-        });
-
-        services.AddAuthorization();
-
+        
         services.AddMvc();
 
         services.AddControllersWithViews();
@@ -94,7 +85,6 @@ public class Startup
 
             if (context.Response.StatusCode == 404 && !context.Response.HasStarted)
             {
-                // Loguj nieudane próby logowania
                 logger.LogWarning($"404 error. Path: {context.Request.Path}");
             }
         });

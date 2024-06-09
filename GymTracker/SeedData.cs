@@ -2,42 +2,41 @@ using Microsoft.AspNetCore.Identity;
 
 public class SeedData
 {
-    public static async Task Initialize(IServiceProvider serviceProvider, UserManager<IdentityUser> userManager, RoleManager<IdentityRole> roleManager)
+    public static async Task Initialize(IServiceProvider serviceProvider)
     {
-        Console.WriteLine("Initialize method called.");
-        string roleName = "Administrator";
-        IdentityResult roleResult;
-
-        // SprawdŸ, czy rola ju¿ istnieje
-        var roleExist = await roleManager.RoleExistsAsync(roleName);
-        if (!roleExist)
+        using (var scope = serviceProvider.CreateScope())
         {
-            // Jeœli rola nie istnieje, utwórz j¹
-            roleResult = await roleManager.CreateAsync(new IdentityRole(roleName));
-        }
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
+            var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
-        // SprawdŸ, czy administrator ju¿ istnieje
-        IdentityUser admin = await userManager.FindByEmailAsync("admin@admin.com");
+            string roleName = "Admin";
+            IdentityResult roleResult;
 
-        if (admin == null)
-        {
-            // Utwórz administratora tylko jeœli nie istnieje
-            IdentityUser user = new IdentityUser()
+            var roleExist = await roleManager.RoleExistsAsync(roleName);
+            if (!roleExist)
             {
-                UserName = "admin@admin.com",
-                Email = "admin@admin.com",
-            };
+                roleResult = await roleManager.CreateAsync(new IdentityRole(roleName));
+            }
 
-            // Jeœli administrator nie istnieje, utwórz go
-            IdentityResult result = await userManager.CreateAsync(user, "Admin123$");
+            IdentityUser admin = await userManager.FindByEmailAsync("admin@admin.com");
 
-            if (result.Succeeded)
+            if (admin == null)
             {
-                user.EmailConfirmed = true;
-                await userManager.UpdateAsync(user);
+                IdentityUser user = new IdentityUser
+                {
+                    UserName = "admin@admin.com",
+                    Email = "admin@admin.com",
+                    EmailConfirmed = true
+                };
+                
+                IdentityResult result = await userManager.CreateAsync(user, "Admin123$");
 
-                // Przypisz rolê "Administrator" do administratora
-                await userManager.AddToRoleAsync(user, roleName);
+                if (result.Succeeded)
+                {
+                    await userManager.UpdateAsync(user);
+                    var addToRoleResult = await userManager.AddToRoleAsync(user, roleName);
+                    Console.WriteLine($"Add to role result: {addToRoleResult.Succeeded}");
+                }
             }
         }
     }
